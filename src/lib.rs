@@ -10,6 +10,7 @@ enum Host {
     Github,
     Gitlab(String),
     BitBucket,
+    Gitee,
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,8 +26,9 @@ impl fmt::Display for Repo {
         let project = self.project.red();
         let host = match self.host {
             Host::Github => "GitHub".blue(),
-            Host::Gitlab(_) => "GitLab".red(),
+            Host::Gitlab(_) => "GitLab".bright_red(),
             Host::BitBucket => "BitBucket".green(),
+            Host::Gitee => "Gitee".red(),
         };
         write!(f, "{}/{} from {}", owner, project, host)
     }
@@ -55,7 +57,7 @@ fn parse(src: &str) -> Result<Repo, Box<dyn Error>> {
     .unwrap();
     let shortrepo_match = Regex::new(
         r"(?x)
-                                (?P<host>(github|gitlab|bitbucket)?)
+                                (?P<host>(github|gitlab|bitbucket|gitee)?)
                                 (?P<colon>(:))?
                                 (?P<owner>[\w,\-,_]+)
                                 /
@@ -74,6 +76,8 @@ fn parse(src: &str) -> Result<Repo, Box<dyn Error>> {
             hosten = Host::Gitlab(host.to_string());
         } else if host.contains("bitbucket") {
             hosten = Host::BitBucket;
+        } else if host.contains("gitee"){
+            hosten = Host::Gitee;
         } else {
             return Err("Git provider not supported.")?;
         }
@@ -98,6 +102,8 @@ fn parse(src: &str) -> Result<Repo, Box<dyn Error>> {
                 hosten = Host::Gitlab("gitlab.com".to_string());
             } else if host.contains("bitbucket") {
                 hosten = Host::BitBucket;
+            } else if host.contains("gitee"){
+                hosten = Host::Gitee;
             } else {
                 return Err("Git provider not supported.")?;
             }
@@ -126,6 +132,10 @@ fn download(repo: Repo, dest: PathBuf) -> Result<(), Box<dyn Error>> {
             "https://bitbucket.org/{}/{}/get/HEAD.zip",
             repo.owner, repo.project
         ),
+        Host::Gitee => format!(
+            "https://gitee.com/{}/{}/repository/archive/HEAD.zip",
+            repo.owner, repo.project
+        )
     };
     // println!("{}", url);
     let client = reqwest::Client::new();
